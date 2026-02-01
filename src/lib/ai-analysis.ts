@@ -1,0 +1,211 @@
+/**
+ * AI-Powered Tweet Analysis using Claude API
+ *
+ * Provides deeper analysis beyond pattern matching:
+ * - Originality assessment
+ * - Audience alignment
+ * - Rewrite suggestions
+ * - Engagement prediction reasoning
+ */
+
+export interface AIAnalysisResult {
+  originality: {
+    score: number; // 0-100
+    assessment: string;
+    similarPatterns?: string[];
+  };
+  audienceAlignment: {
+    score: number;
+    targetAudience: string;
+    suggestions: string[];
+  };
+  engagementPrediction: {
+    replyLikelihood: 'low' | 'medium' | 'high';
+    viralPotential: 'low' | 'medium' | 'high';
+    reasoning: string;
+  };
+  rewriteSuggestions: {
+    improved: string;
+    explanation: string;
+  }[];
+  overallInsight: string;
+}
+
+export interface AIAnalysisError {
+  error: string;
+  code: 'NO_API_KEY' | 'API_ERROR' | 'RATE_LIMITED' | 'INVALID_RESPONSE';
+}
+
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+
+const SYSTEM_PROMPT = `You are an expert X (Twitter) algorithm analyst. Your job is to analyze draft tweets and provide actionable feedback to maximize reach and engagement.
+
+Key algorithm facts you know:
+- Replies are 13-27x more valuable than likes
+- Reply-to-reply (author responding) is 75x more valuable
+- External links get ~0% reach for non-Premium accounts
+- Native video gets 10x engagement vs text
+- Dwell time matters: users must stay >3 seconds
+- Negative sentiment reduces distribution (Grok AI scores tone)
+- Template/duplicate content is penalized
+- First 30 minutes engagement velocity is critical
+- Questions drive replies (highest value engagement)
+
+Analyze tweets for:
+1. Originality - is this template/generic content?
+2. Engagement hooks - will this generate replies?
+3. Audience fit - who would engage with this?
+4. Improvement opportunities - specific rewrites
+
+Be concise but actionable. Focus on what will actually improve reach.`;
+
+/**
+ * Get API key from Chrome storage
+ */
+export async function getApiKey(): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get(['claudeApiKey'], (result) => {
+        resolve(result.claudeApiKey || null);
+      });
+    } else {
+      // Fallback for testing outside extension context
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Save API key to Chrome storage
+ */
+export async function saveApiKey(apiKey: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({ claudeApiKey: apiKey }, () => {
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
+}
+
+/**
+ * Analyze tweet with Claude API
+ */
+export async function analyzeWithClaude(
+  tweetText: string,
+  context?: {
+    hasMedia?: boolean;
+    mediaType?: string;
+    isPremium?: boolean;
+    recentTweets?: string[];
+  }
+): Promise<AIAnalysisResult | AIAnalysisError> {
+  const apiKey = await getApiKey();
+
+  if (!apiKey) {
+    return {
+      error: 'No API key configured. Add your Claude API key in extension settings.',
+      code: 'NO_API_KEY'
+    };
+  }
+
+  const userPrompt = `Analyze this draft tweet for X (Twitter) algorithm optimization:
+
+"${tweetText}"
+
+Context:
+- Has media: ${context?.hasMedia ? `Yes (${context.mediaType})` : 'No'}
+- Premium account: ${context?.isPremium ? 'Yes' : 'No/Unknown'}
+${context?.recentTweets ? `- Recent tweets by this author:\n${context.recentTweets.slice(0, 3).map(t => `  "${t}"`).join('\n')}` : ''}
+
+Provide your analysis as JSON with this structure:
+{
+  "originality": {
+    "score": <0-100>,
+    "assessment": "<brief assessment>",
+    "similarPatterns": ["<any detected template patterns>"]
+  },
+  "audienceAlignment": {
+    "score": <0-100>,
+    "targetAudience": "<who this appeals to>",
+    "suggestions": ["<suggestions to better target>"]
+  },
+  "engagementPrediction": {
+    "replyLikelihood": "<low|medium|high>",
+    "viralPotential": "<low|medium|high>",
+    "reasoning": "<why>"
+  },
+  "rewriteSuggestions": [
+    {
+      "improved": "<rewritten tweet>",
+      "explanation": "<why this is better>"
+    }
+  ],
+  "overallInsight": "<one key actionable insight>"
+}`;
+
+  try {
+    const response = await fetch(CLAUDE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return { error: 'Rate limited. Please try again in a moment.', code: 'RATE_LIMITED' };
+      }
+      const errorText = await response.text();
+      return { error: `API error: ${errorText}`, code: 'API_ERROR' };
+    }
+
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+
+    if (!content) {
+      return { error: 'Empty response from API', code: 'INVALID_RESPONSE' };
+    }
+
+    // Parse JSON from response (handle markdown code blocks)
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) ||
+                      content.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      return { error: 'Could not parse API response', code: 'INVALID_RESPONSE' };
+    }
+
+    const jsonStr = jsonMatch[1] || jsonMatch[0];
+    const result = JSON.parse(jsonStr) as AIAnalysisResult;
+
+    return result;
+  } catch (err) {
+    return {
+      error: `Request failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      code: 'API_ERROR'
+    };
+  }
+}
+
+/**
+ * Check if result is an error
+ */
+export function isAIError(result: AIAnalysisResult | AIAnalysisError): result is AIAnalysisError {
+  return 'error' in result;
+}
