@@ -1,6 +1,6 @@
 {
   "name": "x-score-extension",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Chrome extension that scores tweets based on X's recommendation algorithm",
   "type": "module",
   "scripts": {
