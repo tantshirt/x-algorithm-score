@@ -130,36 +130,40 @@ Click the extension icon (XS) to open the popup:
 
 ## Algorithm Insights
 
-This extension is based on analysis of [Twitter's open-sourced algorithm](https://github.com/twitter/the-algorithm) combined with community research (2024-2026).
+This extension provides draft tweet scoring based on analysis of:
+- **[xai-org/x-algorithm](https://github.com/xai-org/x-algorithm)** — X's open-source feed ranking pipeline (2025-2026)
+- **[twitter/the-algorithm](https://github.com/twitter/the-algorithm)** — Initial open-source release (2023)
+- **Community research** — Creator best practices and observed patterns
 
-### Engagement Multipliers (from algorithm code)
+### ✅ Verified from Open-Source Code
 
-| Engagement Type | Multiplier | Notes |
-|-----------------|------------|-------|
-| **Reply-to-Reply** | **75x** | You responding to replies = massive boost |
-| **Direct Replies** | **13.5-27x** | Conversation signals are king |
-| **Quote Tweets** | **>Retweets** | Adds commentary = higher value |
-| **Retweets** | **1-2x** | Simple amplification |
-| **Likes** | **0.5x** | Lowest value engagement |
-| **Bookmarks** | **High** | Shows high-intent interest |
+These insights are directly traceable to `xai-org/x-algorithm`:
 
-### Negative Multipliers (Catastrophic)
+| Insight | Source | Notes |
+|---------|--------|-------|
+| **Multi-Action Prediction** | [README.md](https://raw.githubusercontent.com/xai-org/x-algorithm/main/README.md) | Model predicts P(like), P(reply), P(repost), P(click), P(share), P(block), P(mute), P(report), etc. |
+| **Weighted Score Combination** | [weighted_scorer.rs](https://raw.githubusercontent.com/xai-org/x-algorithm/main/home-mixer/scorers/weighted_scorer.rs) | Final score = Σ(weight × P(action)); positive + negative signals |
+| **Video Duration Gating** | [weighted_scorer.rs](https://raw.githubusercontent.com/xai-org/x-algorithm/main/home-mixer/scorers/weighted_scorer.rs) | Videos must exceed MIN_VIDEO_DURATION_MS for VQV weight |
+| **Author Diversity** | [author_diversity_scorer.rs](https://raw.githubusercontent.com/xai-org/x-algorithm/main/home-mixer/scorers/author_diversity_scorer.rs) | Repeated authors get exponential decay: `(1-floor) × decay^position + floor` |
+| **Out-of-Network Penalty** | [oon_scorer.rs](https://raw.githubusercontent.com/xai-org/x-algorithm/main/home-mixer/scorers/oon_scorer.rs) | OON posts multiplied by `OON_WEIGHT_FACTOR < 1.0` |
+| **Candidate Isolation** | [README.md](https://raw.githubusercontent.com/xai-org/x-algorithm/main/README.md) | Candidates can't attend to each other during ranking |
 
-| Signal | Multiplier | Impact |
-|--------|------------|--------|
-| **Reports** | **-369x** | Account-damaging, persists |
-| **Blocks/Mutes** | **-74x** | Accumulates over time |
-| **"Show less"** | **-74x** | Same as block/mute |
+**Important:** Actual weight values (e.g., `FAVORITE_WEIGHT`, `REPLY_WEIGHT`) are configured in `params` and **not published** in the open-source code.
 
-### Critical Discoveries
+### ⚠️ Heuristic Estimates
 
-| Discovery | Impact |
-|-----------|--------|
-| **Links kill non-Premium reach** | Non-Premium accounts with links get ~0% median engagement |
-| **First 30 minutes critical** | Early engagement velocity determines algorithmic boost |
-| **Native video = 10x** | Native video gets 10x engagement vs text-only |
-| **Dwell time: 3 seconds** | Users must stay >3 seconds or quality score drops |
-| **Positive sentiment boost** | Grok AI scores tone - positive content distributed further |
+These insights are based on community research and observed patterns, **not directly verifiable** from open-source code:
+
+| Insight | Type | Notes |
+|---------|------|-------|
+| **Reply engagement value** | Community observation | Replies appear to drive more reach than likes |
+| **Video engagement boost** | Best practice | Native videos typically show higher engagement |
+| **External link penalties** | Community observation | Links may reduce reach, especially for non-Premium |
+| **Question effectiveness** | Best practice | Questions tend to generate reply engagement |
+| **Dwell time thresholds** | Inference | Dwell scoring exists but thresholds not public |
+| **Timing windows** | Best practice | Peak hours based on general social media patterns |
+
+See [INSIGHTS_AUDIT.md](INSIGHTS_AUDIT.md) for full source attribution and methodology.
 
 ---
 
@@ -292,21 +296,27 @@ src/
 
 ## Roadmap
 
-### v0.2.0
-- [ ] Timeline tweet scoring (show scores on existing tweets)
-- [ ] Score history tracking
-- [ ] User context integration (follower count, engagement rate)
+### v0.2.0 ✅ Complete
+- [x] Timeline tweet scoring (show scores on existing tweets)
+- [x] Score history tracking with export to CSV
+- [x] User context integration (follower count, engagement rate)
 
-### v0.3.0
-- [ ] Thread composer with per-tweet scoring
-- [ ] Optimal posting time suggestions
+### v0.3.0 ✅ Complete
+- [x] Thread composer with per-tweet scoring
+- [x] Optimal posting time suggestions
+- [x] Analytics dashboard with trends and insights
+- [x] A/B testing variant generator
+
+### v0.4.0 (Planned)
 - [ ] Chrome Web Store release
+- [ ] Enhanced timeline scoring with filters
+- [ ] Historical performance tracking
 
 ### Future
 - [ ] Firefox support
 - [ ] Safari support
-- [ ] Analytics dashboard
-- [ ] A/B testing suggestions
+- [ ] Advanced analytics with A/B test results
+- [ ] Automated best time scheduler
 
 ---
 

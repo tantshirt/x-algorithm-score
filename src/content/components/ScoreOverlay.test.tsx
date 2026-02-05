@@ -30,7 +30,9 @@ function makeScore(): TweetScore {
 describe('ScoreOverlay', () => {
   it('shows an empty/ready state when visible but no score', () => {
     render(<ScoreOverlay score={null} isVisible={true} />);
-    expect(screen.getByText('Start typing to score')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Score' })).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('No score yet')).toBeInTheDocument();
   });
 
   it('expands and collapses via Escape', () => {
@@ -38,27 +40,25 @@ describe('ScoreOverlay', () => {
     render(<ScoreOverlay score={score} isVisible={true} />);
 
     // Expand
-    fireEvent.click(screen.getByRole('button', { name: /expand score details/i }));
-    expect(screen.getByText(/Predicted reach:/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Score 85' }));
+    expect(screen.getByText('Top recommendation')).toBeInTheDocument();
 
     // Collapse
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByText(/Predicted reach:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Top recommendation')).not.toBeInTheDocument();
   });
 
-  it('supports arrow key navigation between tabs', () => {
+  it('can open detailed analysis', () => {
     const score = makeScore();
     render(<ScoreOverlay score={score} isVisible={true} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /expand score details/i }));
+    // Expand, then open detailed view
+    fireEvent.click(screen.getByRole('button', { name: 'Score 85' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View detailed analysis →' }));
 
-    const suggestionsTab = screen.getByRole('tab', { name: 'suggestions' });
-    const breakdownTab = screen.getByRole('tab', { name: 'breakdown' });
-
-    suggestionsTab.focus();
-    fireEvent.keyDown(suggestionsTab, { key: 'ArrowRight' });
-
-    expect(breakdownTab).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('Score Breakdown')).toBeInTheDocument();
+    expect(screen.getByText('All Recommendations')).toBeInTheDocument();
+    expect(screen.getByText('Predicted Reach')).toBeInTheDocument();
   });
 });
 

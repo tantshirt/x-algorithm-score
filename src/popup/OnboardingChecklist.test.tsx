@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { OnboardingChecklist } from './OnboardingChecklist';
 
 // Mock chrome.runtime.getManifest
@@ -12,66 +12,34 @@ vi.stubGlobal('chrome', {
 afterEach(() => cleanup());
 
 describe('OnboardingChecklist', () => {
-  it('renders with 3 steps', () => {
+  it('renders extension loaded message', () => {
     render(<OnboardingChecklist />);
 
     expect(screen.getByText('Extension Loaded')).toBeInTheDocument();
-    expect(screen.getByText('Pin Extension')).toBeInTheDocument();
-    expect(screen.getByText('Test Overlay')).toBeInTheDocument();
+    expect(screen.getByText('Starting X Algorithm Score...')).toBeInTheDocument();
   });
 
-  it('auto-checks step 1 (Extension Loaded) on mount', () => {
-    render(<OnboardingChecklist />);
-
-    // Step 1 should show "Extension loaded" status
-    expect(screen.getByText('Extension loaded')).toBeInTheDocument();
-  });
-
-  it('shows manual checkbox for step 2 when not pinned', () => {
-    render(<OnboardingChecklist />);
-
-    const checkbox = screen.getByRole('checkbox', { name: /i have pinned the extension/i });
-    expect(checkbox).toBeInTheDocument();
-    expect(checkbox).not.toBeChecked();
-  });
-
-  it('marks step 2 complete when manual checkbox is checked', () => {
-    render(<OnboardingChecklist />);
-
-    const checkbox = screen.getByRole('checkbox', { name: /i have pinned the extension/i });
-    fireEvent.click(checkbox);
-
-    expect(screen.getByText('Extension pinned')).toBeInTheDocument();
-  });
-
-  it('marks step 3 complete when composerDetected prop is true', () => {
-    render(<OnboardingChecklist composerDetected={true} />);
-
-    expect(screen.getByText('Overlay working')).toBeInTheDocument();
-  });
-
-  it('calls onComplete when all 3 steps are complete', () => {
+  it('calls onComplete after timeout', () => {
+    vi.useFakeTimers();
     const onComplete = vi.fn();
 
-    render(
-      <OnboardingChecklist
-        onComplete={onComplete}
-        composerDetected={true}
-      />
-    );
+    render(<OnboardingChecklist onComplete={onComplete} />);
 
-    // Check the manual pin checkbox to complete step 2
-    const checkbox = screen.getByRole('checkbox', { name: /i have pinned the extension/i });
-    fireEvent.click(checkbox);
+    // Initially not called
+    expect(onComplete).not.toHaveBeenCalled();
 
-    // onComplete should be called when all steps are done
-    expect(onComplete).toHaveBeenCalled();
+    // Advance timers by 2.5 seconds
+    vi.advanceTimersByTime(2500);
+
+    // Should be called after timeout
+    expect(onComplete).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
   });
 
-  it('shows pending state for incomplete steps', () => {
-    render(<OnboardingChecklist composerDetected={false} />);
+  it('renders without onComplete callback', () => {
+    render(<OnboardingChecklist />);
 
-    // Step 3 should show pending message
-    expect(screen.getByText('Go to x.com and click Post button')).toBeInTheDocument();
+    expect(screen.getByText('Extension Loaded')).toBeInTheDocument();
   });
 });

@@ -179,6 +179,7 @@ export interface ExtensionSettings {
   onboardingCompleted?: boolean;
   aiConsentAccepted?: boolean;
   animationsEnabled?: boolean;
+  userContext?: UserContext;
 }
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {

@@ -5,6 +5,62 @@ All notable changes to X Algorithm Score will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-06
+
+### Added
+- **Timeline Tweet Scoring**: Display algorithm scores on existing tweets in your timeline
+  - Real-time scoring as tweets load
+  - Color-coded grade badges (S/A/B/C/D/F)
+  - Cached scores to prevent re-scoring
+  - Toggle on/off in Settings
+- **Enhanced Score History**: Comprehensive history tracking and management
+  - Richer entry data (media type, links, hashtags, etc.)
+  - Full History tab with detailed entries
+  - Export to CSV for external analysis
+  - Clear all history option
+  - Score trend tracking
+- **User Context Integration**: Personalized scoring based on your account
+  - Manual input for follower/following counts
+  - Engagement rate tracking
+  - Account age consideration
+  - Premium/verified status
+  - Adjusts link penalties and reach predictions based on context
+- **Thread Composer Support**: Score multiple tweets in a thread simultaneously
+  - Detects all composer boxes (tweetTextarea_0, _1, _2, etc.)
+  - Scores each tweet independently
+  - Accounts for thread length in scoring
+  - Real-time updates as you type across all boxes
+- **Optimal Posting Time Suggestions**: Smart timing recommendations
+  - Analyzes current time vs peak engagement windows
+  - EST timezone-based suggestions (9am-12pm, 7pm-10pm)
+  - Weekday vs weekend considerations
+  - Integrated into suggestion system
+- **Analytics Dashboard**: Visual insights into your tweet performance
+  - Total tweets scored and average score
+  - Grade distribution chart with color-coded bars
+  - Score trend sparkline (last 20 tweets)
+  - Recent trend indicator (+/- from older tweets)
+  - Predicted reach averages
+  - Content insights (media usage, links, threads, replies)
+- **A/B Testing Variant Generator**: Create and compare tweet alternatives
+  - Generates 2-3 strategic variants automatically
+  - Scoring comparison with original
+  - Different strategies: hooks, CTAs, questions, thread format
+  - Copy to clipboard for easy testing
+  - Shows score improvements/decrements
+  - Explains changes made to each variant
+
+### Changed
+- **Settings UI**: Added new sections for user context and timeline scoring
+- **Popup Navigation**: Added Dashboard and History tabs (4 tabs total now)
+- **Score Calculation**: Now accepts optional UserContext parameter
+- **Message Types**: Extended runtime messages for CLEAR_HISTORY and EXPORT_HISTORY
+
+### Improved
+- **Performance**: Timeline scoring uses WeakMap caching for efficiency
+- **Type Safety**: Enhanced TypeScript types for new features
+- **UX**: Collapsible sections for variants and insights to reduce clutter
+
 ## [0.2.0] - 2026-02-05
 
 ### Added
